@@ -1,3 +1,4 @@
-# Summary
+# Table of contents
 
-* [Hacking with GDB](ASM.md)
+* [Introduction](README.md)
+* [Hacking with GDB](asm.md)
