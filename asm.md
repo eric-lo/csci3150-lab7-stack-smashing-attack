@@ -46,13 +46,13 @@ In _overflow.c_, the `main()` function invokes the `checkPasswd()` function. In 
 $ gcc -m32 -g -fno-stack-protector -no-pie overflow.c -o overflow
 ```
 
-To prevent the program from stack buffer overflow attacks, GCC 5.4.0 enables the option `fstack-protector` by default. So, to demonstrate how to hack with stack buffer overflow, we specify `-fno-stack-protector` disabling the stack protector, and here, we forbid the PIE (Position-Independent Executable).&#x20;
+To prevent the program from stack buffer overflow attacks, GCC (>=5.4.0) enables the option `fstack-protector` by default. So, to demonstrate how to hack with stack buffer overflow, we specify `-fno-stack-protector` disabling the stack protector, and here, we forbid the PIE (Position-Independent Executable).&#x20;
 
 Also, we see that the given system is a 64-bit one, but this lab is in the 32-bit environment, so we add '`-m32`' option to deal with this issue. Remember that you are required to install "`gcc-multilib`, `g++-multilib`, `libc6-dev-i386`, `libc6:i386`, and `gdb-multiarch`" by simple "`apt-get install`", and you can check this when later doing gdb hacking by using "`show architecture`" and "`set architecture i386`" commands to make sure that.
 
 Then, we will see this warning information:
 
-![warning](.gitbook/assets/warning.png)
+<figure><img src=".gitbook/assets/image.png" alt=""><figcaption><p>warning</p></figcaption></figure>
 
 Here is a quote from `man gets`.
 
@@ -62,11 +62,11 @@ Yes, just as you guessed, we will make use of the dangerous `gets()` function to
 
 When we enter the correct password(note that we hardcode the correct password in _overflow.c_):
 
-![correct password](.gitbook/assets/correct.png)
+<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption><p>Correct Passwd</p></figcaption></figure>
 
 When we enter a wrong password:
 
-![wrong password](.gitbook/assets/wrong.png)
+<figure><img src=".gitbook/assets/image (2).png" alt=""><figcaption><p>Wrong Passwd</p></figcaption></figure>
 
 ## Procedure and Stack
 
@@ -116,39 +116,41 @@ The information above can be obtained by using GDB on the _**overflow**_ executa
 
 ## Hacking with GDB
 
-{% hint style="info" %}
-An interesting challenge is:&#x20;
+{% hint style="warning" %}
+An interesting **challenge** is:&#x20;
 
-You will watch the demonstration of this lab and then find the correct address yourself (the address in the document is not necessarily the address in your actual operation).
+You will watch the demonstration of this lab and then find the correct address yourself (the address in the document **may not necessarily be** the address in your actual operation).
+
+However, I give you guys <mark style="color:green;">**hints**</mark>**&#x20;about the address,** so read the doc carefully!
 {% endhint %}
 
-Let's start with getting (a) the **return address** of main() after checkPasswd returns, which the _call_ instruction will push to the stack when calling the `checkpasswd()` function.
+Let's start with getting (a) the **return address** of `main()` after `checkPasswd` returns, which the _call_ instruction will push to the stack when calling the `checkpasswd()` function.
 
 1\) `gdb ./overflow`
 
-2\) Firstly read the assembly code of _**overflow**_'s main() function by `disassemble main`
+2\) First read the assembly code of _**overflow**_'s main() function by `disassemble main`
 
 ![disassemble main](.gitbook/assets/disassemble.png)
 
-In the output, there are two parts delimited by a colon, the left part is the address of the assembly instruction, the number in the angle brackets is the offset from the beginning of the function; and the right part is the corresponding assembly instruction. We see from the figure that after the `checkPasswd()` function returns, the execution will continue the `mov` instruction. So **0x08048521** would be the **return address** that we would like to overwrite.
+In the output, there are two parts delimited by a colon, the left part is the address of the assembly instruction, the number in the angle brackets is the offset from the beginning of the function; and the right part is the corresponding assembly instruction. We see from the figure that after the `checkPasswd()` function returns, the execution will continue the `mov` instruction. So **0x08048521** would be the **return address** that we would like to overwrite. _(**Hint**: in your implementation, the address may be <mark style="color:green;">0x080492bf</mark>)._
 
 Now, we read the assembly code of `checkPasswd()` function in order to get (c).&#x20;
 
 <figure><img src=".gitbook/assets/disassembleCheck.png" alt=""><figcaption></figcaption></figure>
 
-Here, we get the address of `granted()` function `call 0x80484f2 <granted>` is **0x080484ea**.
+Here, we get the address of `granted()` function `call 0x80484f2 <granted>` is **0x080484ea**. _(**Hint**: in your implementation, the address may be <mark style="color:green;">**0x0804925b**</mark>)._
 
-Finally, in order to get (b), the buffer address on the stack, we set a breakpoint at address **0x080484b8**, where calling C standard library `gets()` function `call 0x8048360 <gets@plt>`. It is a relocation placeholder that will be replaced by the program loader since gets() is a function in the shared library. In order to set a breakpoint at a specific memory address, we can use `break *` followed by a memory address.
+Finally, in order to get (b), the buffer address on the stack, we set a breakpoint at address **0x080484b8** _(**Hint**: in your implementation, the address may be <mark style="color:green;">**0x08049225**</mark>)_, where calling C standard library `gets()` function `call 0x8048360 <gets@plt>`. It is a relocation placeholder that will be replaced by the program loader since gets() is a function in the shared library. In order to set a breakpoint at a specific memory address, we can use `break *` followed by a memory address.
 
-![break\*](.gitbook/assets/breakAddress.png)
+![break\* (use your own address instead)](.gitbook/assets/breakAddress.png)
 
-After setting breakpoint, we use `run` command to start _**overflow**_ program and it will pause at the breakpoint we set before. Here, we use `x` command to print the content of the stack: `x/20x $esp` means we list 20 double-word data from the top of the stack.&#x20;
+After setting the breakpoint, we <mark style="color:red;">**use the**</mark><mark style="color:red;">**&#x20;**</mark><mark style="color:red;">**`run`**</mark><mark style="color:red;">**&#x20;**</mark><mark style="color:red;">**command to start the**</mark><mark style="color:red;">**&#x20;**</mark>_<mark style="color:red;">**overflow**</mark>_<mark style="color:red;">**&#x20;**</mark><mark style="color:red;">**program,**</mark> and it will pause at the breakpoint we set before. Here, we use the `x`  command to print the content of the stack: `x/20x $esp` means we list 20 double-word data from the top of the stack.&#x20;
 
 <figure><img src=".gitbook/assets/x20x.png" alt=""><figcaption></figcaption></figure>
 
-In the output, there are 5 lines, each line can be divided into two parts with a colon, the right part is 4 two-double values in hex format, the left is the data's address within the same line. For example, we can easily know that the address of the first double-word in the second line is **0xbfffefe0**. And then we find the **return address**(**0x08048521**) is pushed inside the stack with address **0xbfffeffc**.
+In the output, there are 5 lines, each line can be divided into two parts with a colon, the right part is 4 two-double values in hex format, and the left is the data's address within the same line. For example, we can easily know that the address of the first double word in the second line is **0xbfffefe0**. And then we find the **return address**(**0x08048521**) is pushed inside the stack with address **0xbfffeffc**.
 
-Then we use `nexti` command to step one instruction but not step into gets() function. Then **overflow** program asks us to enter the password. After entering a sequence of characters "BBBBCCCC"(four 'B's + four 'C's, '0x42' and '0x43' denote 'B' and 'C' respectively in hex system), we `x/20x $esp` again. The characters overwritten the memory space which are in two green rectangles.
+Then we use the `nexti` command to step one instruction but not step into the `gets()` function. Then **overflow** program asks us to enter the password. After entering a sequence of characters "BBBBCCCC"(four 'B's + four 'C's, '0x42' and '0x43' denote 'B' and 'C' respectively in the hex system), we `x/20x $esp` again. The characters overwritten the memory space which is in two green rectangles.
 
 ![x/20x](.gitbook/assets/x20x1.png)
 
@@ -166,8 +168,8 @@ For convenience, we can use the following command in the terminal to generate 32
 python3 -c 'import sys; sys.stdout.buffer.write(b"C"*28 + b"\xea\x84\x04\x08") ' > attack.txt
 ```
 
-Note that we input the bytes of **0x080484ea** inversely because our platform is based on a little-endian Intel processor.
+Note that we input the bytes of **0x080484ea** inversely because our platform is based on a little-endian Intel processor. _**(Hint: also change the address, maybe&#x20;**<mark style="color:green;">**0x0804925b**</mark>**? (i.e.**_ `\x5b\x92\x04\x08`_**)).**_
 
 With everything ready, we now can enter `./overflow < attack.txt` and gain privileges without knowing the real password.
 
-![hacking done](.gitbook/assets/hackingDone.png)
+<figure><img src=".gitbook/assets/image (4).png" alt=""><figcaption><p>hacking done!</p></figcaption></figure>
